@@ -19,6 +19,9 @@ socket.on('analysis_complete', (data) => {
     loadProject(data.project_id);
     loadProjectsList();
     showSuccess('Analysis complete!');
+    
+    // Show chat section after analysis is complete
+    document.getElementById('chatSection').style.display = 'block';
 });
 
 socket.on('analysis_error', (data) => {
@@ -105,7 +108,8 @@ async function loadProject(projectId) {
         const response = await fetch(`/api/project/${projectId}`);
         const data = await response.json();
         
-        currentProject = data;
+        // Store project with ID for chat
+        currentProject = { ...data, id: projectId };
         
         // Show project details section
         document.getElementById('projectDetails').style.display = 'block';
@@ -186,37 +190,53 @@ async function displayGraph(projectId) {
             )
         };
         
-        // Add edges
+        // Add edges - make them more visible
         const edgeTraces = graphData.edges.map(edge => ({
-            x: [edge.x0, edge.x1],
-            y: [edge.y0, edge.y1],
+            x: [edge.x0, edge.x1, null],  // null creates a break between lines
+            y: [edge.y0, edge.y1, null],
             mode: 'lines',
             type: 'scatter',
             line: {
-                color: 'rgba(100, 116, 139, 0.3)',
-                width: 2
+                color: 'rgba(139, 92, 246, 0.4)',  // Purple color, more visible
+                width: 2.5
             },
-            hoverinfo: 'none'
+            hoverinfo: 'none',
+            showlegend: false
         }));
         
         const layout = {
-            title: 'Project Dependency Graph',
+            title: {
+                text: 'Project Dependency Graph',
+                font: {
+                    size: 20,
+                    color: '#f1f5f9'
+                }
+            },
             showlegend: false,
             hovermode: 'closest',
             plot_bgcolor: '#0f172a',
             paper_bgcolor: '#0f172a',
             font: {
-                color: '#f1f5f9'
+                color: '#f1f5f9',
+                size: 12
             },
             xaxis: {
                 showgrid: false,
                 zeroline: false,
-                showticklabels: false
+                showticklabels: false,
+                range: [-2.5, 2.5]  // Center the graph
             },
             yaxis: {
                 showgrid: false,
                 zeroline: false,
-                showticklabels: false
+                showticklabels: false,
+                range: [-2.5, 2.5]  // Center the graph
+            },
+            margin: {
+                l: 40,
+                r: 40,
+                t: 60,
+                b: 40
             }
         };
         
@@ -309,6 +329,96 @@ function showError(message) {
     alert(`Error: ${message}`);
 }
 
+// ============================================
+// CHAT FUNCTIONALITY
+// ============================================
+
+// Send chat message
+async function sendMessage() {
+    const input = document.getElementById('chatInput');
+    const message = input.value.trim();
+    
+    if (!message) {
+        return;
+    }
+    
+    if (!currentProject) {
+        showError('Please analyze a project first');
+        return;
+    }
+    
+    // Add user message to UI
+    addChatMessage(message, 'user');
+    input.value = '';
+    
+    // Show loading indicator
+    const loadingId = addChatLoading();
+    
+    try {
+        const response = await fetch('/api/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                project_id: currentProject.id,
+                message: message
+            })
+        });
+        
+        const data = await response.json();
+        
+        // Remove loading indicator
+        removeChatLoading(loadingId);
+        
+        if (!response.ok) {
+            addChatMessage(data.error || 'Failed to get response', 'error');
+            return;
+        }
+        
+        // Add bot response to UI
+        addChatMessage(data.response, 'bot');
+        
+    } catch (error) {
+        removeChatLoading(loadingId);
+        addChatMessage('Error: Could not connect to chat service', 'error');
+    }
+}
+
+// Add chat message to UI
+function addChatMessage(text, type) {
+    const container = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${type}`;
+    messageDiv.textContent = text;
+    container.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+}
+
+// Add loading indicator
+function addChatLoading() {
+    const container = document.getElementById('chatMessages');
+    const loadingDiv = document.createElement('div');
+    const loadingId = 'loading-' + Date.now();
+    loadingDiv.id = loadingId;
+    loadingDiv.className = 'chat-loading';
+    loadingDiv.textContent = 'Thinking';
+    container.appendChild(loadingDiv);
+    
+    // Scroll to bottom
+    container.scrollTop = container.scrollHeight;
+    
+    return loadingId;
+}
+
+// Remove loading indicator
+function removeChatLoading(loadingId) {
+    const loadingDiv = document.getElementById(loadingId);
+    if (loadingDiv) {
+        loadingDiv.remove();
+    }
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', () => {
     loadProjectsList();
@@ -319,5 +429,15 @@ document.addEventListener('DOMContentLoaded', () => {
             analyzeProject();
         }
     });
+    
+    // Allow Enter key to send chat message
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    }
 });
 

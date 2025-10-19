@@ -98,8 +98,8 @@ def run_analysis(project_path, exclude_patterns):
         
         # Convert to JSON format for frontend
         if len(G.nodes()) > 0:
-            # Get positions using spring layout
-            pos = nx.spring_layout(G, k=2, iterations=50)
+            # Get positions using spring layout with better spacing
+            pos = nx.spring_layout(G, k=3, iterations=100, scale=2.0, center=(0, 0))
             
             # Create a lookup for actual import/function counts from batch results
             file_stats = {}
@@ -243,6 +243,139 @@ def handle_connect():
 def handle_disconnect():
     """Handle WebSocket disconnection"""
     print('Client disconnected')
+
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """
+    Chat endpoint for project-specific questions
+    POST /api/chat
+    Body: {"project_id": "services", "message": "What does ai_service.py do?"}
+    """
+    data = request.json
+    project_id = data.get('project_id')
+    user_message = data.get('message')
+    
+    if not project_id or not user_message:
+        return jsonify({'error': 'Missing project_id or message'}), 400
+    
+    if project_id not in analysis_cache:
+        return jsonify({'error': 'Project not found. Please analyze a project first.'}), 404
+    
+    try:
+        # Get project context
+        project_data = analysis_cache[project_id]
+        
+        # Build context for AI
+        context = build_project_context(project_data)
+        
+        # Call Gemini with bounded context
+        response = ask_gemini_about_project(user_message, context)
+        
+        return jsonify({'response': response})
+        
+    except Exception as e:
+        return jsonify({'error': f'Chat failed: {str(e)}'}), 500
+
+
+def build_project_context(project_data):
+    """Build a context string from project analysis"""
+    batch = project_data['batch']
+    deps = project_data['dependencies']
+    
+    # Build comprehensive context
+    context = f"""Project Analysis Summary:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+📊 Statistics:
+- Total Files: {batch['statistics']['total_files']}
+- Total Functions: {batch['statistics']['total_definitions']}
+- Total Imports: {batch['statistics']['total_imports']}
+- Total Dependencies: {deps['statistics']['total_dependencies']}
+
+📁 Files in Project:
+"""
+    
+    # Add file details with functions and imports
+    for file in batch['files'][:20]:  # Limit to first 20 files to avoid token limits
+        if file['status'] == 'success':
+            file_path = file['file_path']
+            analysis = file['analysis']
+            
+            context += f"\n{os.path.basename(file_path)}:\n"
+            
+            # List functions
+            if analysis.get('definitions'):
+                context += f"  Functions: {', '.join(analysis['definitions'][:10])}\n"
+            
+            # List imports
+            if analysis.get('imports'):
+                context += f"  Imports: {', '.join(analysis['imports'][:10])}\n"
+    
+    # Add dependency information
+    if deps.get('circular_dependencies'):
+        context += f"\n⚠️ Circular Dependencies: {len(deps['circular_dependencies'])} found\n"
+    
+    if deps.get('hub_files'):
+        context += f"\n🌟 Hub Files (Most Imported):\n"
+        for file, count in deps['hub_files'][:5]:
+            context += f"  - {os.path.basename(file)} ({count} imports)\n"
+    
+    if deps.get('orphaned_files'):
+        context += f"\n🔌 Orphaned Files: {len(deps['orphaned_files'])} files\n"
+    
+    return context
+
+
+def ask_gemini_about_project(question, context):
+    """Ask Gemini a question with project context - BOUNDED TO PROJECT ONLY"""
+    from google import genai
+    
+    api_key = os.getenv('GEMINI_API_KEY')
+    if not api_key:
+        return "Error: GEMINI_API_KEY not configured"
+    
+    client = genai.Client(api_key=api_key)
+    
+    system_prompt = f"""You are a helpful code analysis assistant for Code Cartographer. 
+
+🎯 YOUR SOLE PURPOSE: Answer questions about the SPECIFIC codebase that has been analyzed below.
+
+📋 PROJECT CONTEXT:
+{context}
+
+🚨 CRITICAL RULES:
+1. ONLY answer questions about files, functions, dependencies, and structure in THIS specific project
+2. If asked about ANYTHING outside this codebase (weather, sports, general programming, other projects, etc.), respond EXACTLY with:
+   "I can only answer questions about the analyzed codebase. Please ask about the files, functions, or architecture in this project."
+3. Reference specific files and functions from the context above
+4. Be concise, educational, and helpful
+5. If you don't have enough information from the context, say: "I don't have enough information about that in the analysis. Try analyzing the project again or ask about specific files I can see."
+6. Format your responses clearly with bullet points or short paragraphs
+
+EXAMPLES OF VALID QUESTIONS:
+- "What does ai_service.py do?"
+- "Which file has the most functions?"
+- "Are there any circular dependencies?"
+- "What are the hub files?"
+- "How does the parser_service work?"
+
+EXAMPLES OF INVALID QUESTIONS (respond with the boundary message):
+- "How's the weather?"
+- "Tell me about React"
+- "What's your name?"
+- "Help me write a sorting algorithm"
+"""
+    
+    user_prompt = f"User Question: {question}"
+    
+    try:
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=f"{system_prompt}\n\n{user_prompt}"
+        )
+        return response.text
+    except Exception as e:
+        return f"Error communicating with AI: {str(e)}"
 
 
 if __name__ == '__main__':

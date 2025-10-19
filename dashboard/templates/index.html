@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Code Cartographer - Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.26.0.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>🗺️ Code Cartographer</h1>
+            <p class="subtitle">AI-Powered Repository Navigator</p>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Analyze Section -->
+            <section class="analyze-section card">
+                <h2>📂 Analyze Project</h2>
+                <div class="analyze-form">
+                    <input 
+                        type="text" 
+                        id="projectPath" 
+                        placeholder="/path/to/your/project"
+                        class="input-field"
+                    >
+                    <button onclick="analyzeProject()" class="btn btn-primary">
+                        Analyze
+                    </button>
+                </div>
+                <div id="progressContainer" class="progress-container" style="display: none;">
+                    <div class="progress-bar">
+                        <div id="progressBar" class="progress-fill"></div>
+                    </div>
+                    <p id="progressMessage" class="progress-message">Starting analysis...</p>
+                </div>
+            </section>
+
+            <!-- Projects List -->
+            <section class="projects-section card">
+                <h2>📊 Analyzed Projects</h2>
+                <div id="projectsList" class="projects-list">
+                    <p class="empty-state">No projects analyzed yet. Analyze a project to get started!</p>
+                </div>
+            </section>
+
+            <!-- Project Details -->
+            <section id="projectDetails" class="project-details" style="display: none;">
+                <!-- Statistics -->
+                <div class="card">
+                    <h2>📈 Project Statistics</h2>
+                    <div id="statsContainer" class="stats-grid"></div>
+                </div>
+
+                <!-- Dependency Graph -->
+                <div class="card">
+                    <h2>🕸️ Dependency Graph</h2>
+                    <div id="graphContainer" class="graph-container"></div>
+                </div>
+
+                <!-- AI CHATBOT SECTION - NEW! -->
+                <div id="chatSection" class="card" style="display: none;">
+                    <h2>💬 Ask Questions About This Project</h2>
+                    <p class="chat-description">Ask me anything about the analyzed codebase! I can help you understand functions, dependencies, architecture, and more.</p>
+                    
+                    <div id="chatMessages" class="chat-messages"></div>
+                    
+                    <div class="chat-input-container">
+                        <input 
+                            type="text" 
+                            id="chatInput" 
+                            placeholder="Ask about functions, dependencies, architecture..."
+                            class="input-field"
+                        >
+                        <button onclick="sendMessage()" class="btn btn-primary">
+                            Send
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Architecture Analysis -->
+                <div class="card">
+                    <h2>🤖 AI Architecture Analysis</h2>
+                    <div id="architectureContainer" class="architecture-content"></div>
+                </div>
+
+                <!-- Hub Files -->
+                <div class="card">
+                    <h2>🌟 Hub Files (Most Imported)</h2>
+                    <div id="hubFilesContainer" class="files-list"></div>
+                </div>
+
+                <!-- Circular Dependencies -->
+                <div class="card">
+                    <h2>⚠️ Circular Dependencies</h2>
+                    <div id="circularDepsContainer" class="circular-deps"></div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
+
