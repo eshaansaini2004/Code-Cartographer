@@ -1,0 +1,68 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Environment variables & Secrets (IMPORTANT!)
+.env
+.env.*
+.env.local
+.env.*.local
+*.env
+*_env
+credentials.json
+secrets.json
+api_keys.txt
+*.key
+*.pem
+*.cert
+config.local.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node.js (for VS Code extension)
+node_modules/
+out/
+*.vsix
+
+# Logs (might contain sensitive data)
+*.log
+logs/
+*.log.*
+
+# Backup files
+*.bak
+*.backup
+*.tmp
+*~
+
+# Generated output files (visualizations, reports)
+*_graph.html
+*_stats.html
+*_architecture.txt
+*_full.html
+gemini_test*.html
+gemini_test*.txt
+
+# Code Cartographer cache
+.cartographer_cache/
+*.cartographer.json
+
+
+

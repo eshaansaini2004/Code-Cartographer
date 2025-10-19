@@ -1,0 +1,83 @@
+{
+  "name": "code-cartographer",
+  "displayName": "Code Cartographer",
+  "description": "AI-powered repository navigator that helps developers understand and navigate code",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "activationEvents": [],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "code-cartographer.analyzeFile",
+        "title": "Code Cartographer: Analyze Current File"
+      },
+      {
+        "command": "code-cartographer.analyzeWorkspace",
+        "title": "Code Cartographer: Analyze Entire Workspace"
+      },
+      {
+        "command": "code-cartographer.visualizeWorkspace",
+        "title": "Code Cartographer: Visualize Dependencies"
+      },
+      {
+        "command": "code-cartographer.openDashboard",
+        "title": "Code Cartographer: Open Dashboard"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "code-cartographer.analyzeFile",
+          "when": "editorHasDocument",
+          "group": "navigation"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "code-cartographer.analyzeWorkspace",
+          "when": "explorerResourceIsFolder",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "code-cartographer.analyzeFile"
+        },
+        {
+          "command": "code-cartographer.analyzeWorkspace"
+        },
+        {
+          "command": "code-cartographer.visualizeWorkspace"
+        },
+        {
+          "command": "code-cartographer.openDashboard"
+        }
+      ]
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "pretest": "npm run compile && npm run lint",
+    "lint": "eslint src --ext ts",
+    "test": "node ./out/test/runTest.js"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "18.x",
+    "@typescript-eslint/eslint-plugin": "^6.13.0",
+    "@typescript-eslint/parser": "^6.13.0",
+    "eslint": "^8.54.0",
+    "typescript": "^5.3.2"
+  }
+}
+
+
+
